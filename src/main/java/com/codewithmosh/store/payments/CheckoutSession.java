@@ -1,6 +1,5 @@
-package com.codewithmosh.store.services;
+package com.codewithmosh.store.payments;
 
-import jdk.jfr.DataAmount;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 

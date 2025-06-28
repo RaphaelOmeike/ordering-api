@@ -1,23 +1,16 @@
-package com.codewithmosh.store.services;
+package com.codewithmosh.store.payments;
 
-import com.codewithmosh.store.dtos.CheckoutRequest;
-import com.codewithmosh.store.dtos.CheckoutResponse;
 import com.codewithmosh.store.entities.Order;
 import com.codewithmosh.store.exceptions.CartEmptyException;
 import com.codewithmosh.store.exceptions.CartNotFoundException;
-import com.codewithmosh.store.exceptions.PaymentException;
 import com.codewithmosh.store.repositories.CartRepository;
 import com.codewithmosh.store.repositories.OrderRepository;
-import com.stripe.exception.StripeException;
-import com.stripe.model.checkout.Session;
-import com.stripe.param.checkout.SessionCreateParams;
-import lombok.AllArgsConstructor;
+import com.codewithmosh.store.services.AuthService;
+import com.codewithmosh.store.services.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
 
 @RequiredArgsConstructor
 @Service
@@ -28,8 +21,8 @@ public class CheckoutService {
     private final CartService cartService;
     private final PaymentGateway paymentGateway;
 
-    @Value("${websiteUrl}")
-    public String websiteUrl;
+//    @Value("${websiteUrl}")
+//    public String websiteUrl;
 
     @Transactional //because of persistence context
     public CheckoutResponse checkout(CheckoutRequest request) {
@@ -52,5 +45,16 @@ public class CheckoutService {
             orderRepository.delete(order);
             throw ex;
         }
+    }
+
+    public void handleWebhookEvent(CheckoutRequest.WebhookRequest request) {
+        paymentGateway.parseWebhookRequest(request)
+                .ifPresent(paymentResult -> {
+                    var order = orderRepository.findById(paymentResult.getOrderId()).orElseThrow();
+                    order.setStatus(paymentResult.getPaymentStatus());
+                    orderRepository.save(order);
+
+                });
+
     }
 }
